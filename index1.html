@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Casino Cashier (真實混合派彩提詞機)</title>
+    <title>Casino Cashier (真實混合派彩提詞機 - 完美比例版)</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #1a252f; color: #ecf0f1; max-width: 900px; margin: 0 auto; padding: 20px; text-align: center; }
         h1 { color: #f1c40f; font-size: 1.5em; }
@@ -46,13 +46,13 @@
 </head>
 <body>
 
-    <h1>🎰 真實混合派彩提詞機 (100, 50 + 大量 20)</h1>
+    <h1>🎰 真實混合派彩提詞機 (加入合理 $5 / $10 比例)</h1>
 
     <div class="control-panel">
         <label for="sortOrder">派錢次序：</label>
         <select id="sortOrder">
-            <option value="desc">由大額到細額 (先派 $100 ➡️ $50 ➡️ 大量 $20 ➡️ 硬幣)</option>
-            <option value="asc">由細額到大額 (先派 硬幣 ➡️ 大量 $20 ➡️ $50 ➡️ $100)</option>
+            <option value="desc">由大額到細額 (先派 $100 ➡️ 大量 $20 ➡️ $10/$5 ➡️ 硬幣)</option>
+            <option value="asc">由細額到大額 (先派 硬幣 ➡️ $5/$10 ➡️ 大量 $20 ➡️ $100)</option>
         </select>
         <button class="btn-generate" onclick="generateNewPayout()">🔄 開新一局 (模擬客要求)</button>
     </div>
@@ -102,8 +102,6 @@
             
             // 生成一個 $800 到 $4000 嘅大數目
             let targetAmount = Math.floor(Math.random() * 32) * 100 + 800; 
-            
-            // 加上隨機嘅 $10 同 $5 尾數
             targetAmount += Math.floor(Math.random() * 20) * 5; 
             
             // 生成少量硬幣 ($0.05 到 $4.95)
@@ -112,16 +110,14 @@
             let remainingBills = targetAmount;
             let remainingCoins = coinTotal;
             
-            // --- 智能拆分邏輯 (模擬真實客人要求) ---
-            
-            // 1. 抽一部分變成 $100 (佔總數 20% - 60%)
+            // 1. 抽一部分變成 $100
             let maxHundreds = Math.floor((remainingBills * (Math.random() * 0.4 + 0.2)) / 100);
             for(let i = 0; i < maxHundreds; i++) {
                 moneyQueue.push(denoms.find(d => d.val === 100));
                 remainingBills -= 100;
             }
 
-            // 2. 抽幾張變成 $50 (0 到 4 張)
+            // 2. 抽幾張變成 $50
             let maxFifties = Math.floor(Math.random() * 5);
             while(remainingBills >= 50 && maxFifties > 0) {
                 moneyQueue.push(denoms.find(d => d.val === 50));
@@ -129,13 +125,32 @@
                 maxFifties--;
             }
 
-            // 3. 剩下嘅「所有大額數字」全部塞晒畀 $20！(製造大量 20 蚊)
+            // 3. 強制預留空間畀 $10 同 $5 蚊紙 (15蚊到40蚊不等)
+            let smallBillsReserve = (Math.floor(Math.random() * 6) + 3) * 5; 
+            if (remainingBills > smallBillsReserve) {
+                let tempSmall = smallBillsReserve;
+                
+                // 派 $10
+                while(tempSmall >= 10 && Math.random() > 0.3) {
+                    moneyQueue.push(denoms.find(d => d.val === 10));
+                    tempSmall -= 10;
+                    remainingBills -= 10;
+                }
+                // 派 $5
+                while(tempSmall >= 5) {
+                    moneyQueue.push(denoms.find(d => d.val === 5));
+                    tempSmall -= 5;
+                    remainingBills -= 5;
+                }
+            }
+
+            // 4. 中間剩下嘅空間，全部塞晒畀 $20
             while(remainingBills >= 20) {
                 moneyQueue.push(denoms.find(d => d.val === 20));
                 remainingBills -= 20;
             }
 
-            // 4. 處理剩低嘅 $10 同 $5
+            // 5. 如果仲有零碎尾數 (10或5)，再清理埋
             while(remainingBills >= 10) {
                 moneyQueue.push(denoms.find(d => d.val === 10));
                 remainingBills -= 10;
@@ -145,7 +160,7 @@
                 remainingBills -= 5;
             }
 
-            // 5. 處理硬幣
+            // 6. 處理硬幣
             remainingCoins = Math.round(remainingCoins * 100) / 100;
             let coinDenoms = [2, 1, 0.25, 0.1, 0.05];
             for (let val of coinDenoms) {
@@ -240,7 +255,6 @@
             } else if (dollars < 100) {
                 mainStr = convertTens(dollars);
             } else if (dollars >= 100 && dollars <= 9999) {
-                // 賭場過千蚊讀法 (e.g. 1250 -> Twelve-fifty)
                 let hundreds = Math.floor(dollars / 100);
                 let remainder = dollars % 100;
                 
@@ -251,7 +265,7 @@
                 } else if (remainder < 10) {
                     mainStr = hundredsStr + " hundred and " + convertTens(remainder);
                 } else {
-                    mainStr = hundredsStr + " " + convertTens(remainder); // e.g. Twelve-sixty
+                    mainStr = hundredsStr + " " + convertTens(remainder); 
                     subStr = hundredsStr + " hundred and " + convertTens(remainder);
                 }
             } else {

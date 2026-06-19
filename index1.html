@@ -31,4 +31,249 @@
         .deal-btn:disabled { background-color: #7f8c8d; cursor: not-allowed; transform: none; }
 
         .money-item { display: inline-flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 2px 2px 4px rgba(0,0,0,0.4); margin: -5px 0; transition: 0.3s; }
-        .bill { background-color: #85bb65; color: #0
+        .bill { background-color: #85bb65; color: #004d00; padding: 10px 40px; border: 2px solid #004d00; border-radius: 4px; font-size: 18px; width: 80px; }
+        .coin { border-radius: 50%; width: 50px; height: 50px; background-color: #ecf0f1; color: #333; border: 2px solid #bdc3c7; }
+        .coin-toonie { background: radial-gradient(circle, #f1c40f 45%, #ecf0f1 50%); }
+        .coin-loonie { background-color: #f1c40f; border-color: #d4ac0d; width: 45px; height: 45px; }
+
+        .teleprompter { background: #ecf0f1; color: #2c3e50; padding: 20px; border-radius: 10px; text-align: center; border: 4px solid #f1c40f; }
+        .running-total { font-size: 3em; color: #e74c3c; font-weight: bold; margin: 10px 0; }
+        .english-saying { font-size: 2em; color: #16a085; font-weight: bold; }
+        .sub-saying { font-size: 1.1em; color: #7f8c8d; font-style: italic; margin-top: 5px; }
+        
+        .item-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>🎰 真實混合派彩提詞機 (100, 50 + 大量 20)</h1>
+
+    <div class="control-panel">
+        <label for="sortOrder">派錢次序：</label>
+        <select id="sortOrder">
+            <option value="desc">由大額到細額 (先派 $100 ➡️ $50 ➡️ 大量 $20 ➡️ 硬幣)</option>
+            <option value="asc">由細額到大額 (先派 硬幣 ➡️ 大量 $20 ➡️ $50 ➡️ $100)</option>
+        </select>
+        <button class="btn-generate" onclick="generateNewPayout()">🔄 開新一局 (模擬客要求)</button>
+    </div>
+
+    <button id="dealBtn" class="deal-btn" onclick="dealNextItem()">👇 派下一張 (Deal Next)</button>
+
+    <div class="teleprompter">
+        <p style="margin:0; font-size:1.2em; font-weight:bold;">🗣️ 你個口要讀：</p>
+        <div id="englishSaying" class="english-saying">Ready?</div>
+        <div id="subSaying" class="sub-saying"></div>
+        <div id="runningTotalDisplay" class="running-total">$0.00</div>
+    </div>
+
+    <div class="table-area">
+        <div class="stack-box">
+            <div class="stack-title">🏦 未派嘅錢 (Remaining)</div>
+            <div id="remainingArea" class="item-row"></div>
+        </div>
+        <div class="stack-box" style="border-color: #f1c40f;">
+            <div class="stack-title">✅ 枱面已經派嘅錢 (Proved)</div>
+            <div id="provedArea" class="item-row"></div>
+        </div>
+    </div>
+
+    <script>
+        let moneyQueue = [];
+        let provedMoney = [];
+        let currentRunningTotal = 0;
+
+        const denoms = [
+            { val: 100, type: 'bill', label: '$100' },
+            { val: 50, type: 'bill', label: '$50' },
+            { val: 20, type: 'bill', label: '$20' },
+            { val: 10, type: 'bill', label: '$10' },
+            { val: 5, type: 'bill', label: '$5' },
+            { val: 2, type: 'coin', label: '$2', class: 'coin-toonie' },
+            { val: 1, type: 'coin', label: '$1', class: 'coin-loonie' },
+            { val: 0.25, type: 'coin', label: '25¢', class: '' },
+            { val: 0.1, type: 'coin', label: '10¢', class: '' },
+            { val: 0.05, type: 'coin', label: '5¢', class: '' }
+        ];
+
+        function generateNewPayout() {
+            moneyQueue = [];
+            provedMoney = [];
+            currentRunningTotal = 0;
+            
+            // 生成一個 $800 到 $4000 嘅大數目
+            let targetAmount = Math.floor(Math.random() * 32) * 100 + 800; 
+            
+            // 加上隨機嘅 $10 同 $5 尾數
+            targetAmount += Math.floor(Math.random() * 20) * 5; 
+            
+            // 生成少量硬幣 ($0.05 到 $4.95)
+            let coinTotal = Math.floor(Math.random() * 100) * 0.05; 
+            
+            let remainingBills = targetAmount;
+            let remainingCoins = coinTotal;
+            
+            // --- 智能拆分邏輯 (模擬真實客人要求) ---
+            
+            // 1. 抽一部分變成 $100 (佔總數 20% - 60%)
+            let maxHundreds = Math.floor((remainingBills * (Math.random() * 0.4 + 0.2)) / 100);
+            for(let i = 0; i < maxHundreds; i++) {
+                moneyQueue.push(denoms.find(d => d.val === 100));
+                remainingBills -= 100;
+            }
+
+            // 2. 抽幾張變成 $50 (0 到 4 張)
+            let maxFifties = Math.floor(Math.random() * 5);
+            while(remainingBills >= 50 && maxFifties > 0) {
+                moneyQueue.push(denoms.find(d => d.val === 50));
+                remainingBills -= 50;
+                maxFifties--;
+            }
+
+            // 3. 剩下嘅「所有大額數字」全部塞晒畀 $20！(製造大量 20 蚊)
+            while(remainingBills >= 20) {
+                moneyQueue.push(denoms.find(d => d.val === 20));
+                remainingBills -= 20;
+            }
+
+            // 4. 處理剩低嘅 $10 同 $5
+            while(remainingBills >= 10) {
+                moneyQueue.push(denoms.find(d => d.val === 10));
+                remainingBills -= 10;
+            }
+            while(remainingBills >= 5) {
+                moneyQueue.push(denoms.find(d => d.val === 5));
+                remainingBills -= 5;
+            }
+
+            // 5. 處理硬幣
+            remainingCoins = Math.round(remainingCoins * 100) / 100;
+            let coinDenoms = [2, 1, 0.25, 0.1, 0.05];
+            for (let val of coinDenoms) {
+                while (remainingCoins >= val) {
+                    moneyQueue.push(denoms.find(d => d.val === val));
+                    remainingCoins = Math.round((remainingCoins - val) * 100) / 100;
+                }
+            }
+
+            // 排序
+            const sortOrder = document.getElementById('sortOrder').value;
+            if (sortOrder === 'desc') {
+                moneyQueue.sort((a, b) => b.val - a.val);
+            } else {
+                moneyQueue.sort((a, b) => a.val - b.val);
+            }
+
+            updateUI();
+            document.getElementById('dealBtn').disabled = false;
+            document.getElementById('dealBtn').innerText = "👇 派下一張 (Deal Next)";
+            
+            document.getElementById('runningTotalDisplay').innerText = "$0.00";
+            document.getElementById('englishSaying').innerText = "Ready?";
+            document.getElementById('subSaying').innerText = "";
+        }
+
+        function dealNextItem() {
+            if (moneyQueue.length === 0) return;
+
+            let item = moneyQueue.shift();
+            provedMoney.push(item);
+            currentRunningTotal += item.val;
+            currentRunningTotal = Math.round(currentRunningTotal * 100) / 100;
+
+            updateUI();
+
+            document.getElementById('runningTotalDisplay').innerText = "$" + currentRunningTotal.toFixed(2).replace('.00', '');
+            
+            let englishWords = getEnglishPronunciation(currentRunningTotal);
+            document.getElementById('englishSaying').innerText = englishWords.main;
+            document.getElementById('subSaying').innerText = englishWords.sub ? `(正式讀法: ${englishWords.sub})` : "";
+
+            if (moneyQueue.length === 0) {
+                document.getElementById('dealBtn').disabled = true;
+                document.getElementById('dealBtn').innerText = "✅ 已經派完！";
+                document.getElementById('subSaying').innerText = "Final Total!";
+            }
+        }
+
+        function updateUI() {
+            const remArea = document.getElementById('remainingArea');
+            const provArea = document.getElementById('provedArea');
+            remArea.innerHTML = '';
+            provArea.innerHTML = '';
+
+            moneyQueue.forEach(item => {
+                let div = document.createElement('div');
+                div.className = `money-item ${item.type} ${item.class || ''}`;
+                div.innerText = item.label;
+                remArea.appendChild(div);
+            });
+
+            provedMoney.forEach(item => {
+                let div = document.createElement('div');
+                div.className = `money-item ${item.type} ${item.class || ''}`;
+                div.innerText = item.label;
+                provArea.appendChild(div);
+            });
+        }
+
+        function getEnglishPronunciation(amount) {
+            let dollars = Math.floor(amount);
+            let cents = Math.round((amount - dollars) * 100);
+            
+            let mainStr = "";
+            let subStr = "";
+
+            function convertTens(n) {
+                const units = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+                const teens = ["ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+                const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+                
+                if (n < 10) return units[n];
+                if (n >= 10 && n < 20) return teens[n - 10];
+                if (n >= 20) {
+                    return tens[Math.floor(n / 10)] + (n % 10 > 0 ? "-" + units[n % 10] : "");
+                }
+            }
+
+            if (dollars === 0) {
+                mainStr = "Zero";
+            } else if (dollars < 100) {
+                mainStr = convertTens(dollars);
+            } else if (dollars >= 100 && dollars <= 9999) {
+                // 賭場過千蚊讀法 (e.g. 1250 -> Twelve-fifty)
+                let hundreds = Math.floor(dollars / 100);
+                let remainder = dollars % 100;
+                
+                let hundredsStr = hundreds === 10 ? "ten" : convertTens(hundreds);
+                
+                if (remainder === 0) {
+                    mainStr = hundredsStr + " hundred";
+                } else if (remainder < 10) {
+                    mainStr = hundredsStr + " hundred and " + convertTens(remainder);
+                } else {
+                    mainStr = hundredsStr + " " + convertTens(remainder); // e.g. Twelve-sixty
+                    subStr = hundredsStr + " hundred and " + convertTens(remainder);
+                }
+            } else {
+                mainStr = "Huge Amount!"; 
+            }
+
+            if (cents > 0) {
+                if (mainStr !== "Zero") mainStr += " and ";
+                else mainStr = "";
+                
+                let centWords = convertTens(cents);
+                mainStr += centWords + " cents";
+                if (subStr) subStr += " and " + centWords + " cents";
+            }
+
+            mainStr = mainStr.charAt(0).toUpperCase() + mainStr.slice(1);
+            if (subStr) subStr = subStr.charAt(0).toUpperCase() + subStr.slice(1);
+
+            return { main: mainStr, sub: subStr };
+        }
+
+        window.onload = generateNewPayout;
+    </script>
+</body>
+</html>
